@@ -1,0 +1,8 @@
+{
+    "model_file": "./config/ppocrv6_medium_rec_int8_resizer_m_640.hbm",
+    "model_name": "ppocrv6_medium_rec_int8_resizer_m_640",
+    "char_dict_file": "./config/char_dict.txt",
+    "model_input_width": 640,
+    "model_input_height": 48,
+    "task_num": 4
+}
