@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>mono_ocr_recognition</name>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
   <description>mono_ocr_recognition perception node</description>
   <maintainer email="zixi01.chen@d-robotics.cc">zixi01.chen</maintainer>
   <license>Apache License 2.0</license>
@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
   <depend>dnn_node</depend>
   <depend>cv_bridge</depend>
   <depend>std_msgs</depend>

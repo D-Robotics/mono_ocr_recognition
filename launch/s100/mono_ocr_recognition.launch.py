@@ -74,10 +74,14 @@ def generate_launch_description():
                 'publish_image_source': LaunchConfiguration('publish_image_source'),
                 'publish_message_topic_name': '/hbmem_img',
                 'publish_image_format': 'jpg',
+                # 缩放到 3840x2160 再发：原尺寸大图（>24MB/帧）会撞 FastDDS
+                # SHM 池限制，发布/接收跌到 ~1fps
+                'publish_output_image_w': '3840',
+                'publish_output_image_h': '2160',
                 'publish_out_msg_type': '2160p',
                 'publish_is_shared_mem': 'True',
                 'publish_is_compressed_img_pub': 'False',
-                'publish_fps': '5'
+                'publish_encoding': 'nv12'
             }.items()
         )
         cam_node = fb_node
@@ -118,8 +122,7 @@ def generate_launch_description():
             'codec_in_format': 'nv12',
             'codec_out_format': 'jpeg',
             'codec_sub_topic': '/hbmem_img', 
-            'codec_pub_topic': '/image',
-            'codec_output_framerate': '5'
+            'codec_pub_topic': '/image'
         }.items()
     )
 
@@ -160,6 +163,7 @@ def generate_launch_description():
             {"is_shared_mem_sub": 1},
             {"dump_render_img": 0},
             {"ai_msg_pub_topic_name": '/hobot_ocr_detection'},
+            {'stale_threshold_ms': 3000},
             # 算法固定订阅 HbmMsg2160P 全分辨率帧，话题与图片源对齐
             {"sharedmem_img_topic_name": "/hbmem_img"}
         ],

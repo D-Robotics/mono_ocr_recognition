@@ -108,7 +108,7 @@ MonoOcrRecognitionNode::MonoOcrRecognitionNode(
 #ifdef SHARED_MEM_ENABLED
       sharedmem_img_subscription_4k_ =
           this->create_subscription<hbm_img_msgs::msg::HbmMsg2160P>(
-              sharedmem_img_topic_name_, rclcpp::SensorDataQoS(),
+              sharedmem_img_topic_name_, rclcpp::SensorDataQoS().keep_last(1),
               std::bind(&MonoOcrRecognitionNode::SharedMemImgProcess, this,
                         std::placeholders::_1));
       RCLCPP_WARN(rclcpp::get_logger("mono_ocr_recognition"),
@@ -411,6 +411,7 @@ int MonoOcrRecognitionNode::PostProcess(
 
   // 批量 ROI 输出：output_tensors[i] = 第 i 个 ROI 的 CTC 输出
   // 逐个 CTC 解码得到文字
+  auto post_start = std::chrono::steady_clock::now();
   std::vector<std::string> texts;
   for (auto &tensor : pout->output_tensors) {
     std::string text = mono_ocr_recognition::CtcDecode(tensor,
@@ -419,6 +420,9 @@ int MonoOcrRecognitionNode::PostProcess(
     RCLCPP_INFO(rclcpp::get_logger("mono_ocr_recognition"),
                 "Recognized text: %s", text.c_str());
   }
+  int post_ms = static_cast<int>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - post_start).count());
 
   // 把识别文字填进 roi.type，统一发布
   ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
@@ -434,6 +438,27 @@ int MonoOcrRecognitionNode::PostProcess(
   if (full_frame_w_ > 0 && !display_full_resolution_) {
     out_scale = static_cast<double>(cache_img_w_) / full_frame_w_;
   }
+  // 算法运行情况日志：识别批大小 + 推理/后处理耗时 + 检测到识别的链路延迟
+  if (node_output->rt_stat && node_output->rt_stat->fps_updated) {
+    auto now_tp = std::chrono::system_clock::now();
+    auto det_tp = std::chrono::system_clock::time_point(
+        std::chrono::seconds(pout->det_msg->header.stamp.sec) +
+        std::chrono::nanoseconds(pout->det_msg->header.stamp.nanosec));
+    int det_delay_ms = static_cast<int>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            now_tp - det_tp).count());
+    RCLCPP_WARN(this->get_logger(),
+                "Rec rois: %zu, Sub fps: %.2f, Smart fps: %.2f, "
+                "det msg delay ms: %d, infer time ms: %d, "
+                "post process time ms: %d",
+                pout->output_tensors.size(),
+                node_output->rt_stat->input_fps,
+                node_output->rt_stat->output_fps,
+                det_delay_ms,
+                node_output->rt_stat->infer_time_ms,
+                post_ms);
+  }
+
   for (const auto &target : pout->det_msg->targets) {
     ai_msgs::msg::Target t;
     t.set__type(target.type);
@@ -457,3 +482,6 @@ int MonoOcrRecognitionNode::PostProcess(
   msg_publisher_->publish(std::move(pub_data));
   return 0;
 }
+
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(MonoOcrRecognitionNode)

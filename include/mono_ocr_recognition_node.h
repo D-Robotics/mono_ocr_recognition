@@ -18,6 +18,8 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
+#include <chrono>
 #include <vector>
 
 #include "dnn_node/dnn_node.h"
@@ -55,6 +57,9 @@ class MonoOcrRecognitionNode : public DnnNode {
  public:
   MonoOcrRecognitionNode(const std::string &node_name,
           const NodeOptions &options = NodeOptions());
+  // component 容器加载入口
+  explicit MonoOcrRecognitionNode(const rclcpp::NodeOptions &options)
+      : MonoOcrRecognitionNode("mono_ocr_recognition", options) {}
   ~MonoOcrRecognitionNode() override;
 
  protected:

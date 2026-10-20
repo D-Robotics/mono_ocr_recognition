@@ -17,6 +17,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(ai_msgs REQUIRED)
@@ -71,6 +72,7 @@ add_executable(${PROJECT_NAME}
 ament_target_dependencies(
   ${PROJECT_NAME}
   rclcpp
+  rclcpp_components
   dnn_node
   hobot_cv
   sensor_msgs
@@ -83,8 +85,34 @@ if (${SHARED_MEM})
   ament_target_dependencies(${PROJECT_NAME} hbm_img_msgs)
 endif ()
 
-install(TARGETS ${PROJECT_NAME}
-  RUNTIME DESTINATION lib/${PROJECT_NAME})
+# component 形式加载（tros_container 内与其他节点同进程）
+add_library(${PROJECT_NAME}_component SHARED
+  src/image_utils.cpp
+  src/mono_ocr_recognition_node.cpp
+  src/post_process/mono_ocr_recognition_output_parser.cpp
+  src/post_process/local_nms.cpp
+)
+ament_target_dependencies(${PROJECT_NAME}_component
+  rclcpp
+  rclcpp_components
+  dnn_node
+  hobot_cv
+  sensor_msgs
+  ai_msgs
+  cv_bridge
+  OpenCV
+)
+if (${SHARED_MEM})
+  ament_target_dependencies(${PROJECT_NAME}_component hbm_img_msgs)
+endif ()
+rclcpp_components_register_node(${PROJECT_NAME}_component
+  PLUGIN "MonoOcrRecognitionNode"
+  EXECUTABLE mono_ocr_recognition_comp)
+
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_component
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/launch/${PREFIX_PATH}/
   DESTINATION share/${PROJECT_NAME}/launch)
